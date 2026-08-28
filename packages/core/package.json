@@ -1,0 +1,22 @@
+{
+  "name": "@projectbrain/core",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@projectbrain/shared": "workspace:*",
+    "@projectbrain/parser": "workspace:*",
+    "@projectbrain/indexer": "workspace:*",
+    "@projectbrain/graph": "workspace:*",
+    "@projectbrain/rules": "workspace:*",
+    "@projectbrain/templates": "workspace:*",
+    "@projectbrain/security": "workspace:*",
+    "@projectbrain/git": "workspace:*",
+    "@projectbrain/ai": "workspace:*",
+    "@projectbrain/analyzer": "workspace:*"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

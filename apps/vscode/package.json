@@ -1,0 +1,118 @@
+{
+  "name": "projectbrain-vscode",
+  "displayName": "ProjectBrain",
+  "description": "Codebase Intelligence, Architecture Guardrails & AI Context Engineering for VS Code",
+  "version": "0.1.0",
+  "publisher": "oneheka",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/oneheka/Project-Brain-AI.git"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters",
+    "Other"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "projectbrain-sidebar",
+          "title": "ProjectBrain",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "projectbrain-sidebar": [
+        {
+          "id": "projectbrain.overview",
+          "name": "Overview & Health"
+        },
+        {
+          "id": "projectbrain.codebase",
+          "name": "Codebase & Architecture"
+        },
+        {
+          "id": "projectbrain.quality",
+          "name": "Quality & Dead Code"
+        },
+        {
+          "id": "projectbrain.security",
+          "name": "Security & Secrets"
+        },
+        {
+          "id": "projectbrain.ai",
+          "name": "AI Context & Tasks"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "projectbrain.analyze",
+        "title": "ProjectBrain: Analyze Project",
+        "category": "ProjectBrain"
+      },
+      {
+        "command": "projectbrain.findDeadCode",
+        "title": "ProjectBrain: Find Dead Code",
+        "category": "ProjectBrain"
+      },
+      {
+        "command": "projectbrain.generatePrompt",
+        "title": "ProjectBrain: Generate AI Prompt",
+        "category": "ProjectBrain"
+      },
+      {
+        "command": "projectbrain.startTask",
+        "title": "ProjectBrain: Start Task Session",
+        "category": "ProjectBrain"
+      },
+      {
+        "command": "projectbrain.finishTask",
+        "title": "ProjectBrain: Finish Task Session",
+        "category": "ProjectBrain"
+      },
+      {
+        "command": "projectbrain.reviewAiChanges",
+        "title": "ProjectBrain: Review AI Changes",
+        "category": "ProjectBrain"
+      }
+    ],
+    "configuration": {
+      "title": "ProjectBrain",
+      "properties": {
+        "projectbrain.aiMode": {
+          "type": "string",
+          "enum": ["offline", "local", "cloud", "automatic"],
+          "default": "offline",
+          "description": "AI analysis mode"
+        },
+        "projectbrain.ollamaEndpoint": {
+          "type": "string",
+          "default": "http://localhost:11434",
+          "description": "Local Ollama server URL"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@projectbrain/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.90.0",
+    "typescript": "^5.7.3"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "allowSyntheticDefaultImports": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "baseUrl": ".",
+    "paths": {
+      "@projectbrain/shared": ["./packages/shared/src/index.ts"],
+      "@projectbrain/parser": ["./packages/parser/src/index.ts"],
+      "@projectbrain/indexer": ["./packages/indexer/src/index.ts"],
+      "@projectbrain/graph": ["./packages/graph/src/index.ts"],
+      "@projectbrain/rules": ["./packages/rules/src/index.ts"],
+      "@projectbrain/templates": ["./packages/templates/src/index.ts"],
+      "@projectbrain/security": ["./packages/security/src/index.ts"],
+      "@projectbrain/git": ["./packages/git/src/index.ts"],
+      "@projectbrain/ai": ["./packages/ai/src/index.ts"],
+      "@projectbrain/analyzer": ["./packages/analyzer/src/index.ts"],
+      "@projectbrain/core": ["./packages/core/src/index.ts"],
+      "@projectbrain/template-pack": ["./template-pack/src/index.ts"]
+    }
+  }
+}

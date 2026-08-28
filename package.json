@@ -1,0 +1,21 @@
+{
+  "name": "projectbrain-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ProjectBrain — Codebase Intelligence, Architecture Analysis and AI Guardrails",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "template-pack/*"
+  ],
+  "scripts": {
+    "typecheck": "bun x tsc --noEmit",
+    "test": "bun test",
+    "compile:vscode": "bun run --cwd apps/vscode compile",
+    "watch:vscode": "bun run --cwd apps/vscode watch"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.5",
+    "typescript": "^5.7.3"
+  }
+}

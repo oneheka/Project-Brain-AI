@@ -1,0 +1,143 @@
+{
+  "lockfileVersion": 2,
+  "configVersion": 1,
+  "workspaces": {
+    "": {
+      "name": "projectbrain-monorepo",
+      "devDependencies": {
+        "@types/node": "^22.13.5",
+        "typescript": "^5.7.3",
+      },
+    },
+    "apps/vscode": {
+      "name": "projectbrain-vscode",
+      "version": "0.1.0",
+      "dependencies": {
+        "@projectbrain/core": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/vscode": "^1.90.0",
+        "typescript": "^5.7.3",
+      },
+    },
+    "packages/ai": {
+      "name": "@projectbrain/ai",
+      "version": "0.1.0",
+      "dependencies": {
+        "@projectbrain/shared": "workspace:*",
+      },
+    },
+    "packages/analyzer": {
+      "name": "@projectbrain/analyzer",
+      "version": "0.1.0",
+      "dependencies": {
+        "@projectbrain/graph": "workspace:*",
+        "@projectbrain/indexer": "workspace:*",
+        "@projectbrain/shared": "workspace:*",
+      },
+    },
+    "packages/core": {
+      "name": "@projectbrain/core",
+      "version": "0.1.0",
+      "dependencies": {
+        "@projectbrain/ai": "workspace:*",
+        "@projectbrain/analyzer": "workspace:*",
+        "@projectbrain/git": "workspace:*",
+        "@projectbrain/graph": "workspace:*",
+        "@projectbrain/indexer": "workspace:*",
+        "@projectbrain/parser": "workspace:*",
+        "@projectbrain/rules": "workspace:*",
+        "@projectbrain/security": "workspace:*",
+        "@projectbrain/shared": "workspace:*",
+        "@projectbrain/templates": "workspace:*",
+      },
+    },
+    "packages/git": {
+      "name": "@projectbrain/git",
+      "version": "0.1.0",
+      "dependencies": {
+        "@projectbrain/shared": "workspace:*",
+      },
+    },
+    "packages/graph": {
+      "name": "@projectbrain/graph",
+      "version": "0.1.0",
+      "dependencies": {
+        "@projectbrain/shared": "workspace:*",
+      },
+    },
+    "packages/indexer": {
+      "name": "@projectbrain/indexer",
+      "version": "0.1.0",
+      "dependencies": {
+        "@projectbrain/parser": "workspace:*",
+        "@projectbrain/shared": "workspace:*",
+      },
+    },
+    "packages/parser": {
+      "name": "@projectbrain/parser",
+      "version": "0.1.0",
+      "dependencies": {
+        "@projectbrain/shared": "workspace:*",
+      },
+    },
+    "packages/rules": {
+      "name": "@projectbrain/rules",
+      "version": "0.1.0",
+      "dependencies": {
+        "@projectbrain/shared": "workspace:*",
+      },
+    },
+    "packages/security": {
+      "name": "@projectbrain/security",
+      "version": "0.1.0",
+      "dependencies": {
+        "@projectbrain/shared": "workspace:*",
+      },
+    },
+    "packages/shared": {
+      "name": "@projectbrain/shared",
+      "version": "0.1.0",
+    },
+    "packages/templates": {
+      "name": "@projectbrain/templates",
+      "version": "0.1.0",
+      "dependencies": {
+        "@projectbrain/shared": "workspace:*",
+      },
+    },
+  },
+  "packages": {
+    "@projectbrain/ai": ["@projectbrain/ai@workspace:packages/ai"],
+
+    "@projectbrain/analyzer": ["@projectbrain/analyzer@workspace:packages/analyzer"],
+
+    "@projectbrain/core": ["@projectbrain/core@workspace:packages/core"],
+
+    "@projectbrain/git": ["@projectbrain/git@workspace:packages/git"],
+
+    "@projectbrain/graph": ["@projectbrain/graph@workspace:packages/graph"],
+
+    "@projectbrain/indexer": ["@projectbrain/indexer@workspace:packages/indexer"],
+
+    "@projectbrain/parser": ["@projectbrain/parser@workspace:packages/parser"],
+
+    "@projectbrain/rules": ["@projectbrain/rules@workspace:packages/rules"],
+
+    "@projectbrain/security": ["@projectbrain/security@workspace:packages/security"],
+
+    "@projectbrain/shared": ["@projectbrain/shared@workspace:packages/shared"],
+
+    "@projectbrain/templates": ["@projectbrain/templates@workspace:packages/templates"],
+
+    "@types/node": ["@types/node@22.20.1", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q=="],
+
+    "@types/vscode": ["@types/vscode@1.134.0", "", {}, "sha512-NDEu0hg4sF7+vvFsADsktqUJ6f80LHSZvVK2Ovo1XiQ0/VHck1O3zst+ZZyVA/uvz6vo6LcuoqU2q48YMqOwWw=="],
+
+    "projectbrain-vscode": ["projectbrain-vscode@workspace:apps/vscode"],
+
+    "typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
+
+    "undici-types": ["undici-types@6.21.0", "", {}, "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ=="],
+  }
+}
