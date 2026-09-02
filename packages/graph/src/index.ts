@@ -148,4 +148,8 @@ export class DependencyGraph {
       edges: [...this.edges]
     };
   }
+
+  toData(): DependencyGraphData {
+    return this.toJSON();
+  }
 }

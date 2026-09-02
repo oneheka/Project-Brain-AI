@@ -12,7 +12,8 @@
     "typecheck": "bun x tsc --noEmit",
     "test": "bun test",
     "compile:vscode": "bun run --cwd apps/vscode compile",
-    "watch:vscode": "bun run --cwd apps/vscode watch"
+    "watch:vscode": "bun run --cwd apps/vscode watch",
+    "build:vsix": "bun run --cwd apps/vscode package"
   },
   "devDependencies": {
     "@types/node": "^22.13.5",

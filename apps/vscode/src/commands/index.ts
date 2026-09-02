@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { CoreBridge } from '../core-bridge';
 import type { ProjectBrainStatusBar } from '../status-bar';
+import { DependencyGraphPanel } from '../views/graph-panel';
 
 export function registerAllCommands(
   context: vscode.ExtensionContext,
@@ -199,6 +200,12 @@ export function registerAllCommands(
     }
   });
 
+  // 10. Show Dependency Graph Webview
+  const showGraphCmd = vscode.commands.registerCommand('projectbrain.showGraph', async () => {
+    await CoreBridge.ensureIndexed();
+    DependencyGraphPanel.createOrShow();
+  });
+
   context.subscriptions.push(
     analyzeCmd,
     deadCodeCmd,
@@ -208,6 +215,7 @@ export function registerAllCommands(
     securityReportCmd,
     openFileCmd,
     refreshAllCmd,
-    reviewCmd
+    reviewCmd,
+    showGraphCmd
   );
 }

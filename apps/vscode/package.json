@@ -107,6 +107,12 @@
         "title": "Review AI Changes",
         "category": "ProjectBrain",
         "icon": "$(git-compare)"
+      },
+      {
+        "command": "projectbrain.showGraph",
+        "title": "Show Dependency Graph",
+        "category": "ProjectBrain",
+        "icon": "$(type-hierarchy)"
       }
     ],
     "menus": {
@@ -114,6 +120,11 @@
         {
           "command": "projectbrain.analyze",
           "when": "view == projectbrain.overview",
+          "group": "navigation@1"
+        },
+        {
+          "command": "projectbrain.showGraph",
+          "when": "view == projectbrain.codebase",
           "group": "navigation@1"
         },
         {
@@ -148,6 +159,7 @@
   "scripts": {
     "compile": "bun build ./src/extension.ts --target=node --outfile=dist/extension.js --external=vscode",
     "watch": "bun build ./src/extension.ts --target=node --outfile=dist/extension.js --external=vscode --watch",
+    "package": "bun run compile && bun x @vscode/vsce package --no-dependencies -o ../../projectbrain-vscode-0.1.0.vsix",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -156,6 +168,7 @@
   },
   "devDependencies": {
     "@types/vscode": "^1.90.0",
+    "@vscode/vsce": "^3.2.1",
     "typescript": "^5.7.3"
   }
 }
