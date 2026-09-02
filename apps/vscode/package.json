@@ -34,58 +34,100 @@
       "projectbrain-sidebar": [
         {
           "id": "projectbrain.overview",
-          "name": "Overview & Health"
+          "name": "Overview & Health",
+          "icon": "resources/icon.svg"
         },
         {
           "id": "projectbrain.codebase",
-          "name": "Codebase & Architecture"
+          "name": "Codebase & Architecture",
+          "icon": "resources/icon.svg"
         },
         {
           "id": "projectbrain.quality",
-          "name": "Quality & Dead Code"
+          "name": "Quality & Dead Code",
+          "icon": "resources/icon.svg"
         },
         {
           "id": "projectbrain.security",
-          "name": "Security & Secrets"
+          "name": "Security & Secrets",
+          "icon": "resources/icon.svg"
         },
         {
           "id": "projectbrain.ai",
-          "name": "AI Context & Tasks"
+          "name": "AI Context & Tasks",
+          "icon": "resources/icon.svg"
         }
       ]
     },
     "commands": [
       {
         "command": "projectbrain.analyze",
-        "title": "ProjectBrain: Analyze Project",
-        "category": "ProjectBrain"
+        "title": "Analyze Project",
+        "category": "ProjectBrain",
+        "icon": "$(sync)"
       },
       {
         "command": "projectbrain.findDeadCode",
-        "title": "ProjectBrain: Find Dead Code",
-        "category": "ProjectBrain"
+        "title": "Find Dead Code",
+        "category": "ProjectBrain",
+        "icon": "$(trash)"
       },
       {
         "command": "projectbrain.generatePrompt",
-        "title": "ProjectBrain: Generate AI Prompt",
-        "category": "ProjectBrain"
+        "title": "Generate AI Prompt",
+        "category": "ProjectBrain",
+        "icon": "$(sparkle)"
       },
       {
         "command": "projectbrain.startTask",
-        "title": "ProjectBrain: Start Task Session",
-        "category": "ProjectBrain"
+        "title": "Start Task Session",
+        "category": "ProjectBrain",
+        "icon": "$(play)"
       },
       {
         "command": "projectbrain.finishTask",
-        "title": "ProjectBrain: Finish Task Session",
-        "category": "ProjectBrain"
+        "title": "Finish Task Session",
+        "category": "ProjectBrain",
+        "icon": "$(pass)"
+      },
+      {
+        "command": "projectbrain.showSecurityReport",
+        "title": "Show Security Report",
+        "category": "ProjectBrain",
+        "icon": "$(shield)"
+      },
+      {
+        "command": "projectbrain.refreshAll",
+        "title": "Refresh All Views",
+        "category": "ProjectBrain",
+        "icon": "$(refresh)"
       },
       {
         "command": "projectbrain.reviewAiChanges",
-        "title": "ProjectBrain: Review AI Changes",
-        "category": "ProjectBrain"
+        "title": "Review AI Changes",
+        "category": "ProjectBrain",
+        "icon": "$(git-compare)"
       }
     ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "projectbrain.analyze",
+          "when": "view == projectbrain.overview",
+          "group": "navigation@1"
+        },
+        {
+          "command": "projectbrain.refreshAll",
+          "when": "view =~ /^projectbrain\\./",
+          "group": "navigation@2"
+        },
+        {
+          "command": "projectbrain.generatePrompt",
+          "when": "view == projectbrain.ai",
+          "group": "navigation@1"
+        }
+      ]
+    },
     "configuration": {
       "title": "ProjectBrain",
       "properties": {
@@ -104,12 +146,13 @@
     }
   },
   "scripts": {
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
+    "compile": "bun build ./src/extension.ts --target=node --outfile=dist/extension.js --external=vscode",
+    "watch": "bun build ./src/extension.ts --target=node --outfile=dist/extension.js --external=vscode --watch",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@projectbrain/core": "workspace:*"
+    "@projectbrain/core": "workspace:*",
+    "@projectbrain/shared": "workspace:*"
   },
   "devDependencies": {
     "@types/vscode": "^1.90.0",

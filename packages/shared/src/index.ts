@@ -232,6 +232,13 @@ export interface SecretFinding {
 // 8. Health Scores
 // ==========================================
 
+export interface HealthScoreCategory {
+  category: string;
+  score: number;
+  positives: string[];
+  negatives: string[];
+}
+
 export interface ProjectHealthScore {
   overall: number; // 0 - 100
   architecture: number;
@@ -241,12 +248,7 @@ export interface ProjectHealthScore {
   duplication: number;
   maintainability: number;
   aiReadiness: number;
-  breakdown: {
-    category: string;
-    score: number;
-    positives: string[];
-    negatives: string[];
-  }[];
+  breakdown: HealthScoreCategory[];
 }
 
 // ==========================================

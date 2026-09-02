@@ -1,96 +1,49 @@
 import * as vscode from 'vscode';
-import { ProjectBrainCore } from '@projectbrain/core';
-
-let core: ProjectBrainCore | undefined;
+import { CoreBridge } from './core-bridge';
+import { HealthTreeProvider } from './providers/health-tree-provider';
+import { ArchitectureTreeProvider } from './providers/architecture-tree-provider';
+import { QualityTreeProvider } from './providers/quality-tree-provider';
+import { SecurityTreeProvider } from './providers/security-tree-provider';
+import { TasksTreeProvider } from './providers/tasks-tree-provider';
+import { ProjectBrainStatusBar } from './status-bar';
+import { registerAllCommands } from './commands';
 
 export function activate(context: vscode.ExtensionContext) {
   const workspaceFolders = vscode.workspace.workspaceFolders;
-  const rootPath = workspaceFolders && workspaceFolders.length > 0 ? workspaceFolders[0].uri.fsPath : process.cwd();
+  const rootPath = workspaceFolders && workspaceFolders.length > 0
+    ? workspaceFolders[0].uri.fsPath
+    : process.cwd();
 
-  core = new ProjectBrainCore({
-    rootPath,
-    config: {
-      analysis: {
-        include: ['src/**'],
-        exclude: ['node_modules/**', 'dist/**']
-      },
-      ai: {
-        mode: 'offline'
-      },
-      rules: {
-        autoGenerate: true
-      }
-    }
-  });
+  // 1. Initialize Core Bridge
+  CoreBridge.initialize(rootPath);
 
-  // Register command: Analyze
-  const analyzeCmd = vscode.commands.registerCommand('projectbrain.analyze', async () => {
-    vscode.window.showInformationMessage('ProjectBrain: Analyzing codebase...');
-    await core?.scanAndIndex();
-    const score = await core?.calculateHealthScore();
-    vscode.window.showInformationMessage(`ProjectBrain: Analysis complete. Health score: ${score?.overall}/100`);
-  });
-
-  // Register command: Find Dead Code
-  const deadCodeCmd = vscode.commands.registerCommand('projectbrain.findDeadCode', async () => {
-    const deadCodeItems = core?.findDeadCode() ?? [];
-    if (deadCodeItems.length === 0) {
-      vscode.window.showInformationMessage('ProjectBrain: No dead code detected.');
-    } else {
-      vscode.window.showWarningMessage(`ProjectBrain: Found ${deadCodeItems.length} potentially unused code items.`);
-    }
-  });
-
-  // Register command: Generate AI Prompt
-  const generatePromptCmd = vscode.commands.registerCommand('projectbrain.generatePrompt', async () => {
-    const task = await vscode.window.showInputBox({
-      prompt: 'Enter task description for AI Prompt Generation',
-      placeHolder: 'e.g. Implement user notifications'
-    });
-
-    if (!task) return;
-
-    const prompt = core?.generateContextPrompt(task);
-
-    if (prompt) {
-      await vscode.env.clipboard.writeText(prompt);
-      vscode.window.showInformationMessage('ProjectBrain: Context prompt copied to clipboard!');
-    }
-  });
-
-  // Register command: Start Task Session
-  const startTaskCmd = vscode.commands.registerCommand('projectbrain.startTask', async () => {
-    const title = await vscode.window.showInputBox({
-      prompt: 'Enter task name to start session',
-      placeHolder: 'e.g. Refactor auth service'
-    });
-    if (!title) return;
-
-    const session = core?.startTaskSession(title);
-    vscode.window.showInformationMessage(`ProjectBrain: Started task session [${session?.title}]`);
-  });
-
-  // Register command: Finish Task Session
-  const finishTaskCmd = vscode.commands.registerCommand('projectbrain.finishTask', () => {
-    core?.finishTaskSession();
-    vscode.window.showInformationMessage('ProjectBrain: Task session finished.');
-  });
-
-  // Register command: Review AI Changes
-  const reviewCmd = vscode.commands.registerCommand('projectbrain.reviewAiChanges', () => {
-    vscode.window.showInformationMessage('ProjectBrain: Reviewing AI changes...');
-  });
+  // 2. Register TreeView Providers
+  const healthProvider = new HealthTreeProvider();
+  const archProvider = new ArchitectureTreeProvider();
+  const qualityProvider = new QualityTreeProvider();
+  const securityProvider = new SecurityTreeProvider();
+  const tasksProvider = new TasksTreeProvider();
 
   context.subscriptions.push(
-    analyzeCmd,
-    deadCodeCmd,
-    generatePromptCmd,
-    startTaskCmd,
-    finishTaskCmd,
-    reviewCmd
+    vscode.window.registerTreeDataProvider('projectbrain.overview', healthProvider),
+    vscode.window.registerTreeDataProvider('projectbrain.codebase', archProvider),
+    vscode.window.registerTreeDataProvider('projectbrain.quality', qualityProvider),
+    vscode.window.registerTreeDataProvider('projectbrain.security', securityProvider),
+    vscode.window.registerTreeDataProvider('projectbrain.ai', tasksProvider)
   );
+
+  // 3. Initialize Status Bar
+  const statusBar = new ProjectBrainStatusBar(context);
+
+  // 4. Register All Commands
+  registerAllCommands(context, statusBar);
+
+  // 5. Trigger Initial Background Indexing (Non-blocking)
+  CoreBridge.ensureIndexed().catch(() => {
+    // Ignore initial indexing failure (workspace might be empty)
+  });
 }
 
 export function deactivate() {
-  core = undefined;
+  CoreBridge.dispose();
 }

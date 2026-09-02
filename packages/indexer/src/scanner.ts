@@ -149,6 +149,14 @@ export class WorkspaceScanner {
       return false;
     }
 
+    // Skip compiled JS if corresponding TS/TSX source file exists
+    if (ext === '.js' || ext === '.jsx') {
+      const tsPath = _fullPath.replace(/\.jsx?$/, ext === '.jsx' ? '.tsx' : '.ts');
+      if (fs.existsSync(tsPath)) {
+        return false;
+      }
+    }
+
     // Check excludes
     for (const pattern of this.excludePatterns) {
       if (this.matchSimplePattern(relativePath, pattern)) {
