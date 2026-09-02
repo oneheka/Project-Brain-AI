@@ -4,6 +4,7 @@
   "description": "Codebase Intelligence, Architecture Guardrails & AI Context Engineering for VS Code",
   "version": "0.1.0",
   "publisher": "oneheka",
+  "icon": "resources/icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/oneheka/Project-Brain-AI.git"
