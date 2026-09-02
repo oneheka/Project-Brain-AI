@@ -14,8 +14,8 @@ export class CoreBridge {
       rootPath,
       config: {
         analysis: {
-          include: ['src/**', 'packages/**', 'apps/**', 'lib/**', 'components/**', 'pages/**', 'routes/**'],
-          exclude: ['node_modules/**', 'dist/**', 'out/**', 'build/**', '.git/**', '.agents/**', '.projectbrain/**']
+          include: ['**/*'],
+          exclude: ['node_modules/**', 'dist/**', 'out/**', 'build/**', '.git/**', '.agents/**', '.projectbrain/**', '.vscode-test/**']
         },
         ai: {
           mode: 'offline'

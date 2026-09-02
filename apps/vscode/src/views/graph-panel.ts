@@ -64,9 +64,11 @@ export class DependencyGraphPanel {
     DependencyGraphPanel.currentPanel = new DependencyGraphPanel(panel);
   }
 
-  private update(): void {
+  private async update(): Promise<void> {
     const core = CoreBridge.getCore();
     if (!core) return;
+
+    await CoreBridge.ensureIndexed();
 
     const graphData = core.graph.toData();
     const archModel = core.detectArchitecture();
