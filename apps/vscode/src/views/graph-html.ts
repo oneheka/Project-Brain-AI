@@ -1,15 +1,15 @@
 import type { DependencyGraphData, ArchitectureModel } from '@projectbrain/shared';
 
 export function getGraphWebviewHtml(graphData: DependencyGraphData, archModel: ArchitectureModel): string {
-  // Normalize all paths in graph data to forward slashes in Node/TS before JSON serialization
+  // Normalize all paths in graph data to forward slashes
   const sanitizedGraph = {
-    nodes: graphData.nodes.map(n => ({
+    nodes: (graphData.nodes || []).map(n => ({
       id: (n.id || '').replace(/\\/g, '/'),
       label: n.label || '',
       kind: n.kind,
-      filePath: n.filePath ? n.filePath.replace(/\\/g, '/') : (n.id || '').replace('file:', '').replace(/\\/g, '/')
+      filePath: n.filePath ? n.filePath.replace(/\\/g, '/') : (n.id || '').replace('file:', '').replace(/\\/g, '')
     })),
-    edges: graphData.edges.map(e => ({
+    edges: (graphData.edges || []).map(e => ({
       id: (e.id || '').replace(/\\/g, '/'),
       sourceId: (e.sourceId || '').replace(/\\/g, '/'),
       targetId: (e.targetId || '').replace(/\\/g, '/'),
@@ -73,18 +73,76 @@ export function getGraphWebviewHtml(graphData: DependencyGraphData, archModel: A
       flex: 1;
       height: 100%;
       position: relative;
-      background: radial-gradient(circle at center, rgba(137, 180, 250, 0.04) 0%, transparent 70%);
+      background: radial-gradient(circle at center, rgba(137, 180, 250, 0.05) 0%, transparent 70%);
+      overflow: hidden;
     }
 
-    canvas {
+    svg#graphSvg {
       width: 100%;
       height: 100%;
       display: block;
       cursor: grab;
     }
 
-    canvas:active {
+    svg#graphSvg:active {
       cursor: grabbing;
+    }
+
+    /* SVG Elements */
+    .edge-line {
+      stroke: rgba(255, 255, 255, 0.2);
+      stroke-width: 1.5px;
+      transition: stroke 0.2s, stroke-width 0.2s;
+    }
+
+    .edge-line.highlighted {
+      stroke: #89b4fa;
+      stroke-width: 3px;
+    }
+
+    .node-group {
+      cursor: pointer;
+      transition: transform 0.05s ease-out;
+    }
+
+    .node-circle {
+      stroke: #ffffff;
+      stroke-width: 2px;
+      transition: r 0.2s, filter 0.2s;
+    }
+
+    .node-group:hover .node-circle {
+      r: 18px;
+      filter: drop-shadow(0 0 8px rgba(137, 180, 250, 0.8));
+    }
+
+    .node-group.selected .node-circle {
+      r: 20px;
+      stroke: #89b4fa;
+      stroke-width: 3.5px;
+      filter: drop-shadow(0 0 12px rgba(137, 180, 250, 0.9));
+    }
+
+    .node-label {
+      fill: #cdd6f4;
+      font-size: 11px;
+      font-weight: 500;
+      text-anchor: middle;
+      pointer-events: none;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    }
+
+    .layer-band {
+      stroke: rgba(255, 255, 255, 0.06);
+      stroke-dasharray: 4 4;
+      stroke-width: 1px;
+    }
+
+    .layer-title {
+      fill: rgba(255, 255, 255, 0.35);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1px;
     }
 
     /* Floating Toolbar */
@@ -111,7 +169,7 @@ export function getGraphWebviewHtml(graphData: DependencyGraphData, archModel: A
       border-radius: 4px;
       font-size: 12px;
       outline: none;
-      width: 170px;
+      width: 180px;
     }
 
     .toolbar input:focus {
@@ -264,13 +322,26 @@ export function getGraphWebviewHtml(graphData: DependencyGraphData, archModel: A
 </head>
 <body>
   <div id="graph-container">
-    <canvas id="graphCanvas"></canvas>
+    <svg id="graphSvg">
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 1 L 10 5 L 0 9 z" fill="rgba(255,255,255,0.4)" />
+        </marker>
+        <marker id="arrow-active" viewBox="0 0 10 10" refX="26" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 1 L 10 5 L 0 9 z" fill="#89b4fa" />
+        </marker>
+      </defs>
+      <g id="layerBands"></g>
+      <g id="viewport">
+        <g id="edgesGroup"></g>
+        <g id="nodesGroup"></g>
+      </g>
+    </svg>
 
     <div class="toolbar">
       <input type="text" id="searchInput" placeholder="🔍 Search modules..." />
       <button id="btnResetView" title="Reset View">🎯 Reset</button>
       <button id="btnToggleOrphans" title="Toggle Orphan Nodes" class="active">🌱 Orphans</button>
-      <button id="btnToggleLayers" title="Organize by Layers" class="active">🥞 Layers</button>
     </div>
 
     <div class="legend">
@@ -299,26 +370,19 @@ export function getGraphWebviewHtml(graphData: DependencyGraphData, archModel: A
       const rawGraph = ${serializedGraph};
       const rawArch = ${serializedArch};
 
-      const canvas = document.getElementById('graphCanvas');
-      const ctx = canvas.getContext('2d');
+      const svg = document.getElementById('graphSvg');
+      const viewport = document.getElementById('viewport');
+      const layerBands = document.getElementById('layerBands');
+      const edgesGroup = document.getElementById('edgesGroup');
+      const nodesGroup = document.getElementById('nodesGroup');
       const sidebar = document.getElementById('sidebar');
       const sidebarContent = document.getElementById('sidebarContent');
       const searchInput = document.getElementById('searchInput');
 
-      let width = 800;
-      let height = 600;
-
-      function resize() {
-        const container = canvas.parentElement;
-        width = canvas.width = Math.max(400, container ? container.clientWidth : window.innerWidth);
-        height = canvas.height = Math.max(300, container ? container.clientHeight : window.innerHeight);
-      }
-      window.addEventListener('resize', resize);
-      resize();
-
       function getLayerForNode(filePath) {
         if (!filePath) return 'backend';
-        for (const layer of rawArch.layers) {
+        for (let i = 0; i < rawArch.layers.length; i++) {
+          const layer = rawArch.layers[i];
           if (layer.files && layer.files.some(f => filePath.indexOf(f) !== -1 || f.indexOf(filePath) !== -1)) {
             return layer.type;
           }
@@ -340,8 +404,17 @@ export function getGraphWebviewHtml(graphData: DependencyGraphData, archModel: A
         }
       }
 
-      // Filter and build nodes
-      const fileNodesMap = new Map();
+      // Group nodes by layer
+      const layerRows = {
+        frontend: { y: 130, label: 'FRONTEND / PRESENTATION', nodes: [] },
+        backend: { y: 320, label: 'BACKEND / DOMAIN CORE', nodes: [] },
+        auth: { y: 510, label: 'SECURITY & AUTH', nodes: [] },
+        shared: { y: 690, label: 'SHARED / CONTRACTS', nodes: [] }
+      };
+
+      const nodeMap = new Map();
+      const allFileNodes = [];
+
       (rawGraph.nodes || []).forEach(n => {
         if (n.kind === 'file' || (n.id && n.id.indexOf('file:') === 0)) {
           const filePath = n.filePath || n.id.replace('file:', '');
@@ -349,252 +422,141 @@ export function getGraphWebviewHtml(graphData: DependencyGraphData, archModel: A
           const parts = filePath.split('/');
           const label = n.label || parts[parts.length - 1] || n.id;
 
-          fileNodesMap.set(n.id, {
+          const nodeObj = {
             id: n.id,
             label: label,
             filePath: filePath,
             layer: layer,
             color: getLayerColor(layer),
-            x: Math.random() * (width - 120) + 60,
-            y: Math.random() * (height - 120) + 60,
-            radius: 14,
+            x: 0,
+            y: 0,
             inDegree: 0,
             outDegree: 0
-          });
+          };
+
+          nodeMap.set(n.id, nodeObj);
+          allFileNodes.push(nodeObj);
+          if (layerRows[layer]) {
+            layerRows[layer].nodes.push(nodeObj);
+          } else {
+            layerRows.backend.nodes.push(nodeObj);
+          }
         }
       });
 
-      const edges = [];
+      // Layout coordinates per layer row
+      const canvasWidth = Math.max(1200, window.innerWidth || 1200);
+      Object.keys(layerRows).forEach(key => {
+        const row = layerRows[key];
+        const count = row.nodes.length;
+        const spacing = canvasWidth / (count + 1);
+        row.nodes.forEach((n, idx) => {
+          n.x = spacing * (idx + 1);
+          n.y = row.y + (idx % 2 === 0 ? -20 : 20);
+        });
+      });
+
+      // Build edges
+      const edgeList = [];
       (rawGraph.edges || []).forEach(e => {
-        const src = fileNodesMap.get(e.sourceId);
-        const tgt = fileNodesMap.get(e.targetId);
+        const src = nodeMap.get(e.sourceId);
+        const tgt = nodeMap.get(e.targetId);
         if (src && tgt && src !== tgt) {
-          edges.push({
+          src.outDegree++;
+          tgt.inDegree++;
+          edgeList.push({
+            id: e.id,
             source: src,
             target: tgt,
             kind: e.kind
           });
-          tgt.inDegree++;
-          src.outDegree++;
         }
       });
 
-      const nodes = Array.from(fileNodesMap.values());
+      // Render Layer Background Bands
+      Object.keys(layerRows).forEach(key => {
+        const row = layerRows[key];
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', '0');
+        line.setAttribute('y1', row.y.toString());
+        line.setAttribute('x2', (canvasWidth * 2).toString());
+        line.setAttribute('y2', row.y.toString());
+        line.setAttribute('class', 'layer-band');
+        layerBands.appendChild(line);
 
-      function getLayerY(layer) {
-        switch (layer) {
-          case 'frontend': return height * 0.18;
-          case 'backend': return height * 0.45;
-          case 'auth': return height * 0.72;
-          case 'shared': return height * 0.88;
-          default: return height * 0.5;
-        }
-      }
-
-      // Initial spread
-      nodes.forEach((n, idx) => {
-        n.y = getLayerY(n.layer) + (Math.random() * 40 - 20);
-        n.x = (width / (nodes.length + 1)) * (idx + 1);
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', '30');
+        text.setAttribute('y', (row.y - 45).toString());
+        text.setAttribute('class', 'layer-title');
+        text.textContent = row.label;
+        layerBands.appendChild(text);
       });
 
-      // View State
-      let zoom = 1.0;
-      let panX = 0;
-      let panY = 0;
-      let isDragging = false;
-      let dragNode = null;
-      let startX = 0;
-      let startY = 0;
+      // Render Edges
+      const edgeElements = new Map();
+      edgeList.forEach(e => {
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', e.source.x.toString());
+        line.setAttribute('y1', e.source.y.toString());
+        line.setAttribute('x2', e.target.x.toString());
+        line.setAttribute('y2', e.target.y.toString());
+        line.setAttribute('class', 'edge-line');
+        line.setAttribute('marker-end', 'url(#arrow)');
+        edgesGroup.appendChild(line);
+        edgeElements.set(e, line);
+      });
+
+      // Render Nodes
+      const nodeElements = new Map();
+      allFileNodes.forEach(n => {
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('class', 'node-group');
+        g.setAttribute('transform', 'translate(' + n.x + ',' + n.y + ')');
+
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('r', '15');
+        circle.setAttribute('fill', n.color);
+        circle.setAttribute('class', 'node-circle');
+
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('y', '28');
+        text.setAttribute('class', 'node-label');
+        text.textContent = n.label;
+
+        g.appendChild(circle);
+        g.appendChild(text);
+        nodesGroup.appendChild(g);
+        nodeElements.set(n, g);
+
+        // Click Node
+        g.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          selectNode(n);
+        });
+      });
+
       let selectedNode = null;
-      let searchQuery = '';
       let showOrphans = true;
-      let organizeByLayers = true;
 
-      // Physics Simulation
-      function stepSimulation() {
-        for (let i = 0; i < nodes.length; i++) {
-          for (let j = i + 1; j < nodes.length; j++) {
-            const a = nodes[i];
-            const b = nodes[j];
-            const dx = b.x - a.x;
-            const dy = b.y - a.y;
-            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-            if (dist < 130) {
-              const force = (130 - dist) / dist * 0.4;
-              a.x -= dx * force * 0.1;
-              a.y -= dy * force * 0.05;
-              b.x += dx * force * 0.1;
-              b.y += dy * force * 0.05;
-            }
-          }
-        }
-
-        edges.forEach(e => {
-          const dx = e.target.x - e.source.x;
-          const dy = e.target.y - e.source.y;
-          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-          const force = (dist - 100) * 0.02;
-          e.source.x += dx * force;
-          e.target.x -= dx * force;
+      function selectNode(n) {
+        selectedNode = n;
+        nodeElements.forEach((el, node) => {
+          el.classList.toggle('selected', node === n);
         });
 
-        nodes.forEach(n => {
-          if (organizeByLayers) {
-            const targetY = getLayerY(n.layer);
-            n.y += (targetY - n.y) * 0.06;
-          }
-          n.x = Math.max(50, Math.min(width - 50, n.x));
-        });
-      }
-
-      // Drawing
-      function draw() {
-        resize();
-        ctx.clearRect(0, 0, width, height);
-
-        if (nodes.length === 0) {
-          ctx.fillStyle = '#89b4fa';
-          ctx.font = '14px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText('Scanning codebase... Click "Analyze Project" in ProjectBrain to build the graph.', width / 2, height / 2);
-          return;
-        }
-
-        ctx.save();
-        ctx.translate(panX, panY);
-        ctx.scale(zoom, zoom);
-
-        // Edges
-        edges.forEach(e => {
-          const isOrphan = (e.source.inDegree === 0 && e.source.outDegree === 0) || (e.target.inDegree === 0 && e.target.outDegree === 0);
-          if (!showOrphans && isOrphan) return;
-
-          const isHighlighted = selectedNode && (e.source === selectedNode || e.target === selectedNode);
-
-          ctx.beginPath();
-          ctx.moveTo(e.source.x, e.source.y);
-          ctx.lineTo(e.target.x, e.target.y);
-          ctx.strokeStyle = isHighlighted ? '#89b4fa' : 'rgba(255, 255, 255, 0.18)';
-          ctx.lineWidth = isHighlighted ? 2.5 : 1;
-          ctx.stroke();
-
-          // Arrow Head
-          if (isHighlighted) {
-            const angle = Math.atan2(e.target.y - e.source.y, e.target.x - e.source.x);
-            const headLen = 9;
-            const arrowX = e.target.x - Math.cos(angle) * (e.target.radius + 3);
-            const arrowY = e.target.y - Math.sin(angle) * (e.target.radius + 3);
-
-            ctx.beginPath();
-            ctx.moveTo(arrowX, arrowY);
-            ctx.lineTo(arrowX - headLen * Math.cos(angle - Math.PI / 6), arrowY - headLen * Math.sin(angle - Math.PI / 6));
-            ctx.lineTo(arrowX - headLen * Math.cos(angle + Math.PI / 6), arrowY - headLen * Math.sin(angle + Math.PI / 6));
-            ctx.fillStyle = '#89b4fa';
-            ctx.fill();
-          }
+        edgeElements.forEach((line, edge) => {
+          const isConnected = edge.source === n || edge.target === n;
+          line.classList.toggle('highlighted', isConnected);
+          line.setAttribute('marker-end', isConnected ? 'url(#arrow-active)' : 'url(#arrow)');
         });
 
-        // Nodes
-        nodes.forEach(n => {
-          const isOrphan = n.inDegree === 0 && n.outDegree === 0;
-          if (!showOrphans && isOrphan) return;
-
-          const isMatched = searchQuery && n.label.toLowerCase().indexOf(searchQuery) !== -1;
-          const isSelected = selectedNode === n;
-
-          if (isSelected || isMatched) {
-            ctx.beginPath();
-            ctx.arc(n.x, n.y, n.radius + 7, 0, Math.PI * 2);
-            ctx.fillStyle = isSelected ? 'rgba(137, 180, 250, 0.35)' : 'rgba(250, 204, 21, 0.35)';
-            ctx.fill();
-          }
-
-          ctx.beginPath();
-          ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
-          ctx.fillStyle = n.color;
-          ctx.fill();
-          ctx.lineWidth = isSelected ? 3 : 1.5;
-          ctx.strokeStyle = '#ffffff';
-          ctx.stroke();
-
-          ctx.fillStyle = '#cdd6f4';
-          ctx.font = '11px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(n.label, n.x, n.y + n.radius + 14);
-        });
-
-        ctx.restore();
+        sidebar.classList.remove('collapsed');
+        renderInspector(n);
       }
-
-      function animate() {
-        stepSimulation();
-        draw();
-        requestAnimationFrame(animate);
-      }
-      animate();
-
-      function screenToWorld(sx, sy) {
-        return {
-          x: (sx - panX) / zoom,
-          y: (sy - panY) / zoom
-        };
-      }
-
-      function findNodeAt(worldX, worldY) {
-        for (let i = nodes.length - 1; i >= 0; i--) {
-          const n = nodes[i];
-          const dx = worldX - n.x;
-          const dy = worldY - n.y;
-          if (Math.sqrt(dx * dx + dy * dy) <= n.radius + 5) {
-            return n;
-          }
-        }
-        return null;
-      }
-
-      canvas.addEventListener('mousedown', e => {
-        const rect = canvas.getBoundingClientRect();
-        const pos = screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
-        const clicked = findNodeAt(pos.x, pos.y);
-
-        if (clicked) {
-          dragNode = clicked;
-          selectedNode = clicked;
-          sidebar.classList.remove('collapsed');
-          renderInspector(clicked);
-        } else {
-          isDragging = true;
-          startX = e.clientX - panX;
-          startY = e.clientY - panY;
-        }
-      });
-
-      window.addEventListener('mousemove', e => {
-        if (dragNode) {
-          const rect = canvas.getBoundingClientRect();
-          const pos = screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
-          dragNode.x = pos.x;
-          dragNode.y = pos.y;
-        } else if (isDragging) {
-          panX = e.clientX - startX;
-          panY = e.clientY - startY;
-        }
-      });
-
-      window.addEventListener('mouseup', () => {
-        dragNode = null;
-        isDragging = false;
-      });
-
-      canvas.addEventListener('wheel', e => {
-        e.preventDefault();
-        const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
-        zoom = Math.max(0.2, Math.min(3.5, zoom * zoomFactor));
-      });
 
       function renderInspector(node) {
-        const inEdges = edges.filter(e => e.target === node);
-        const outEdges = edges.filter(e => e.source === node);
+        const inEdges = edgeList.filter(e => e.target === node);
+        const outEdges = edgeList.filter(e => e.source === node);
 
         let depsHtml = '';
         if (outEdges.length === 0) {
@@ -642,26 +604,78 @@ export function getGraphWebviewHtml(graphData: DependencyGraphData, archModel: A
         }
       });
 
+      // Pan & Zoom
+      let zoom = 1.0;
+      let panX = 40;
+      let panY = 20;
+      let isDragging = false;
+      let startX = 0;
+      let startY = 0;
+
+      function updateTransform() {
+        viewport.setAttribute('transform', 'translate(' + panX + ',' + panY + ') scale(' + zoom + ')');
+        layerBands.setAttribute('transform', 'translate(' + panX + ',' + panY + ') scale(' + zoom + ')');
+      }
+      updateTransform();
+
+      svg.addEventListener('mousedown', (e) => {
+        if (e.target.closest('.node-group')) return;
+        isDragging = true;
+        startX = e.clientX - panX;
+        startY = e.clientY - panY;
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (isDragging) {
+          panX = e.clientX - startX;
+          panY = e.clientY - startY;
+          updateTransform();
+        }
+      });
+
+      window.addEventListener('mouseup', () => {
+        isDragging = false;
+      });
+
+      svg.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const zoomFactor = e.deltaY < 0 ? 1.12 : 0.88;
+        zoom = Math.max(0.2, Math.min(3.0, zoom * zoomFactor));
+        updateTransform();
+      });
+
       document.getElementById('btnResetView').addEventListener('click', () => {
         zoom = 1.0;
-        panX = 0;
-        panY = 0;
+        panX = 40;
+        panY = 20;
+        updateTransform();
       });
 
       const btnToggleOrphans = document.getElementById('btnToggleOrphans');
       btnToggleOrphans.addEventListener('click', () => {
         showOrphans = !showOrphans;
         btnToggleOrphans.classList.toggle('active', showOrphans);
-      });
-
-      const btnToggleLayers = document.getElementById('btnToggleLayers');
-      btnToggleLayers.addEventListener('click', () => {
-        organizeByLayers = !organizeByLayers;
-        btnToggleLayers.classList.toggle('active', organizeByLayers);
+        allFileNodes.forEach(n => {
+          const isOrphan = n.inDegree === 0 && n.outDegree === 0;
+          const el = nodeElements.get(n);
+          if (el) {
+            el.style.display = (!showOrphans && isOrphan) ? 'none' : 'block';
+          }
+        });
       });
 
       searchInput.addEventListener('input', e => {
-        searchQuery = e.target.value.toLowerCase().trim();
+        const query = e.target.value.toLowerCase().trim();
+        allFileNodes.forEach(n => {
+          const el = nodeElements.get(n);
+          if (el) {
+            if (!query) {
+              el.style.opacity = '1';
+            } else {
+              el.style.opacity = n.label.toLowerCase().indexOf(query) !== -1 ? '1' : '0.15';
+            }
+          }
+        });
       });
 
       document.getElementById('closeSidebar').addEventListener('click', () => {
