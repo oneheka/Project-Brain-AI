@@ -27,7 +27,7 @@ export function activate(context: vscode.ExtensionContext) {
   const analyzeCmd = vscode.commands.registerCommand('projectbrain.analyze', async () => {
     vscode.window.showInformationMessage('ProjectBrain: Analyzing codebase...');
     await core?.scanAndIndex();
-    const score = core?.calculateHealthScore();
+    const score = await core?.calculateHealthScore();
     vscode.window.showInformationMessage(`ProjectBrain: Analysis complete. Health score: ${score?.overall}/100`);
   });
 

@@ -141,6 +141,10 @@ export class WorkspaceScanner {
       '.pdf', '.mp4', '.mp3', '.wasm'
     ]);
 
+    if (fileName.endsWith('.d.ts') || fileName.endsWith('.map') || fileName.endsWith('.tsbuildinfo')) {
+      return false;
+    }
+
     if (binaryExts.has(ext)) {
       return false;
     }

@@ -29,7 +29,7 @@ async function main() {
 
   const stats = core.index.getStats();
   const graphStats = core.graph.getStats();
-  const healthScore = core.calculateHealthScore();
+  const healthScore = await core.calculateHealthScore();
   const deadCode = core.findDeadCode();
 
   console.log('📊 Codebase Statistics:');
