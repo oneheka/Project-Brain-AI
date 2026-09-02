@@ -6,7 +6,8 @@
   "types": "./src/index.ts",
   "dependencies": {
     "@projectbrain/shared": "workspace:*",
-    "@projectbrain/parser": "workspace:*"
+    "@projectbrain/parser": "workspace:*",
+    "@projectbrain/graph": "workspace:*"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

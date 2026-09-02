@@ -1,8 +1,9 @@
 import type { FileEntity } from '@projectbrain/shared';
+import { TypeScriptParser } from './typescript-parser';
 
 export interface CodeParser {
   supportedExtensions: string[];
-  parseFile(filePath: string, content: string): Promise<FileEntity>;
+  parseFile(filePath: string, content: string, relativePath?: string): Promise<FileEntity>;
 }
 
 export class ParserRegistry {
@@ -18,6 +19,13 @@ export class ParserRegistry {
     const ext = filePath.slice(filePath.lastIndexOf('.')).toLowerCase();
     return this.parsers.get(ext);
   }
+
+  getSupportedExtensions(): string[] {
+    return Array.from(this.parsers.keys());
+  }
 }
 
 export const defaultParserRegistry = new ParserRegistry();
+defaultParserRegistry.registerParser(new TypeScriptParser());
+
+export { TypeScriptParser };

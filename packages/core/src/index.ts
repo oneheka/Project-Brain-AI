@@ -1,5 +1,6 @@
-import { CodebaseIndex } from '@projectbrain/indexer';
+import { CodebaseIndex, WorkspaceScanner, IndexingPipeline, type IndexingResult } from '@projectbrain/indexer';
 import { DependencyGraph } from '@projectbrain/graph';
+import { defaultParserRegistry, ParserRegistry } from '@projectbrain/parser';
 import { DeadCodeEngine, DuplicateDetector } from '@projectbrain/analyzer';
 import { SecretScanner } from '@projectbrain/security';
 import { RuleEngine } from '@projectbrain/rules';
@@ -26,6 +27,7 @@ export interface ProjectBrainWorkspace {
 export class ProjectBrainCore {
   readonly index: CodebaseIndex;
   readonly graph: DependencyGraph;
+  readonly parserRegistry: ParserRegistry;
   readonly deadCodeEngine: DeadCodeEngine;
   readonly duplicateDetector: DuplicateDetector;
   readonly secretScanner: SecretScanner;
@@ -37,6 +39,7 @@ export class ProjectBrainCore {
   constructor(public readonly workspace: ProjectBrainWorkspace) {
     this.index = new CodebaseIndex();
     this.graph = new DependencyGraph();
+    this.parserRegistry = defaultParserRegistry;
     this.deadCodeEngine = new DeadCodeEngine();
     this.duplicateDetector = new DuplicateDetector();
     this.secretScanner = new SecretScanner();
@@ -45,21 +48,68 @@ export class ProjectBrainCore {
     this.promptBuilder = new PromptBuilder();
   }
 
-  async scanAndIndex(): Promise<void> {
-    // Core indexing workflow
+  async scanAndIndex(): Promise<IndexingResult> {
+    this.index.clear();
+    this.graph.clear();
+
+    const scanner = new WorkspaceScanner({
+      workspaceRoot: this.workspace.rootPath,
+      include: this.workspace.config.analysis.include,
+      exclude: this.workspace.config.analysis.exclude
+    });
+
+    const pipeline = new IndexingPipeline(
+      scanner,
+      this.parserRegistry,
+      this.index,
+      this.graph
+    );
+
+    return await pipeline.run();
   }
 
   calculateHealthScore(): ProjectHealthScore {
+    const stats = this.index.getStats();
+    const graphStats = this.graph.getStats();
+    const deadCodeItems = this.findDeadCode();
+
+    // Health scoring heuristics
+    const deadCodePenalty = Math.min(30, deadCodeItems.length * 3);
+    const codeQuality = Math.max(20, 100 - deadCodePenalty);
+    const architecture = Math.max(30, 100 - (graphStats.orphanNodesCount > 10 ? 15 : 0));
+    const security = 95;
+    const typeSafety = 90;
+    const duplication = 85;
+    const maintainability = Math.round((codeQuality + architecture + typeSafety) / 3);
+    const aiReadiness = Math.round((codeQuality * 0.4 + architecture * 0.4 + maintainability * 0.2));
+
+    const overall = Math.round(
+      (codeQuality + architecture + security + typeSafety + duplication + maintainability + aiReadiness) / 7
+    );
+
     return {
-      overall: 80,
-      architecture: 85,
-      codeQuality: 80,
-      security: 95,
-      typeSafety: 85,
-      duplication: 75,
-      maintainability: 80,
-      aiReadiness: 85,
-      breakdown: []
+      overall,
+      architecture,
+      codeQuality,
+      security,
+      typeSafety,
+      duplication,
+      maintainability,
+      aiReadiness,
+      breakdown: [
+        {
+          category: 'Architecture',
+          score: architecture,
+          positives: [`${stats.filesCount} modules indexed with ${graphStats.edgesCount} dependency connections`],
+          negatives: graphStats.orphanNodesCount > 0 ? [`${graphStats.orphanNodesCount} orphan nodes detected`] : []
+        },
+        {
+          category: 'Code Quality',
+          score: codeQuality,
+          positives: [`${stats.symbolsCount} symbols indexed across ${stats.totalLines} lines`],
+          negatives: deadCodeItems.length > 0 ? [`${deadCodeItems.length} potentially unused symbols`] : []
+        }
+      ]
     };
   }
 
