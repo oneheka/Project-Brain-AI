@@ -3,15 +3,25 @@ import { DependencyGraph } from '@projectbrain/graph';
 import { defaultParserRegistry, ParserRegistry } from '@projectbrain/parser';
 import { DeadCodeEngine, DuplicateDetector } from '@projectbrain/analyzer';
 import { SecretScanner, type SecurityReport } from '@projectbrain/security';
-import { RuleEngine } from '@projectbrain/rules';
+import { RuleEngine, ConventionDetector } from '@projectbrain/rules';
 import { TemplateIntelligenceEngine } from '@projectbrain/templates';
-import { PromptBuilder } from '@projectbrain/ai';
+import {
+  PromptBuilder,
+  ContextCollector,
+  ArchitectureDetector,
+  TaskSessionManager,
+  type CollectorOptions
+} from '@projectbrain/ai';
+import { GitAnalyzer } from '@projectbrain/git';
 import type {
   ProjectBrainConfig,
   ProjectHealthScore,
   DeadCodeItem,
   DuplicateCandidate,
-  TaskSession
+  TaskSession,
+  ArchitectureModel,
+  ProjectConvention,
+  PromptContextPayload
 } from '@projectbrain/shared';
 
 export * from '@projectbrain/shared';
@@ -40,6 +50,12 @@ export class ProjectBrainCore {
   readonly ruleEngine: RuleEngine;
   readonly templateEngine: TemplateIntelligenceEngine;
   readonly promptBuilder: PromptBuilder;
+  readonly gitAnalyzer: GitAnalyzer;
+  readonly taskSessionManager: TaskSessionManager;
+  readonly contextCollector: ContextCollector;
+  readonly architectureDetector: ArchitectureDetector;
+  readonly conventionDetector: ConventionDetector;
+
   private activeTaskSession?: TaskSession;
 
   constructor(public readonly workspace: ProjectBrainWorkspace) {
@@ -52,6 +68,11 @@ export class ProjectBrainCore {
     this.ruleEngine = new RuleEngine();
     this.templateEngine = new TemplateIntelligenceEngine();
     this.promptBuilder = new PromptBuilder();
+    this.gitAnalyzer = new GitAnalyzer(this.workspace.rootPath);
+    this.taskSessionManager = new TaskSessionManager(this.workspace.rootPath, this.gitAnalyzer);
+    this.contextCollector = new ContextCollector(this.index, this.graph, this.ruleEngine);
+    this.architectureDetector = new ArchitectureDetector();
+    this.conventionDetector = new ConventionDetector();
   }
 
   async scanAndIndex(): Promise<IndexingResult> {
@@ -84,6 +105,27 @@ export class ProjectBrainCore {
 
   async runSecurityScan(): Promise<SecurityReport> {
     return await this.secretScanner.fullScan(this.workspace.rootPath, this.index.getAllFiles());
+  }
+
+  detectArchitecture(): ArchitectureModel {
+    return this.architectureDetector.detect(this.index);
+  }
+
+  detectConventions(): ProjectConvention[] {
+    return this.conventionDetector.detect(this.index);
+  }
+
+  generateContextPayload(task: string, options?: CollectorOptions): PromptContextPayload {
+    const deadCodeItems = this.findDeadCode();
+    return this.contextCollector.collectForTask(task, {
+      ...options,
+      deadCodeItems
+    });
+  }
+
+  generateContextPrompt(task: string, options?: CollectorOptions): string {
+    const payload = this.generateContextPayload(task, options);
+    return this.promptBuilder.buildMarkdownPrompt(payload);
   }
 
   async calculateHealthScore(): Promise<ProjectHealthScore> {
@@ -150,30 +192,24 @@ export class ProjectBrainCore {
     };
   }
 
-  startTaskSession(taskId: string, title: string): TaskSession {
-    this.activeTaskSession = {
-      id: taskId,
-      title,
-      status: 'active',
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      relevantModules: [],
-      relevantFiles: [],
-      decisions: [],
-      changedFiles: [],
-      constraints: []
-    };
-    return this.activeTaskSession;
+  startTaskSession(title: string, options?: { relevantModules?: string[]; relevantFiles?: string[] }): TaskSession {
+    const session = this.taskSessionManager.create(title, options);
+    this.activeTaskSession = session;
+    return session;
   }
 
   getActiveTaskSession(): TaskSession | undefined {
     return this.activeTaskSession;
   }
 
-  finishTaskSession(): void {
-    if (this.activeTaskSession) {
-      this.activeTaskSession.status = 'completed';
-      this.activeTaskSession.updatedAt = Date.now();
+  finishTaskSession(sessionId?: string): TaskSession | undefined {
+    const targetId = sessionId ?? this.activeTaskSession?.id;
+    if (!targetId) return undefined;
+
+    const finished = this.taskSessionManager.finish(targetId);
+    if (this.activeTaskSession?.id === targetId) {
+      this.activeTaskSession = finished;
     }
+    return finished;
   }
 }
