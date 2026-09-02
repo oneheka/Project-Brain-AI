@@ -179,24 +179,39 @@ export class WorkspaceScanner {
   }
 
   private matchSimplePattern(filePath: string, pattern: string): boolean {
-    const cleanPattern = pattern.trim().replace(/^\//, '');
+    const cleanPattern = pattern.trim().replace(/^\//, '').replace(/\\/g, '/');
+    const normalizedPath = filePath.replace(/\\/g, '/');
     if (!cleanPattern) return false;
+
+    // Match all wildcards
+    if (cleanPattern === '**/*' || cleanPattern === '**' || cleanPattern === '*' || cleanPattern === '*.*') {
+      return true;
+    }
 
     if (cleanPattern.endsWith('/**')) {
       const prefix = cleanPattern.slice(0, -3);
-      return filePath === prefix || filePath.startsWith(prefix + '/');
+      return normalizedPath === prefix || normalizedPath.startsWith(prefix + '/');
     }
 
     if (cleanPattern.startsWith('**/')) {
       const suffix = cleanPattern.slice(3);
-      return filePath.endsWith(suffix) || filePath.includes('/' + suffix);
+      if (suffix === '*' || suffix === '**' || suffix === '*.*') return true;
+      if (suffix.startsWith('*.')) {
+        return normalizedPath.endsWith(suffix.slice(1));
+      }
+      return normalizedPath.endsWith(suffix) || normalizedPath.includes('/' + suffix);
     }
 
     if (cleanPattern.startsWith('*.')) {
       const ext = cleanPattern.slice(1);
-      return filePath.endsWith(ext);
+      return normalizedPath.endsWith(ext);
     }
 
-    return filePath === cleanPattern || filePath.startsWith(cleanPattern + '/');
+    if (cleanPattern.endsWith('/*')) {
+      const prefix = cleanPattern.slice(0, -2);
+      return normalizedPath.startsWith(prefix + '/');
+    }
+
+    return normalizedPath === cleanPattern || normalizedPath.startsWith(cleanPattern + '/');
   }
 }
